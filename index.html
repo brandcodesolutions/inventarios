@@ -9,13 +9,22 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            padding: 10px;
+            margin: 0;
         }
 
-        #imageUpload {
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
             margin-top: 20px;
             padding: 10px;
             font-size: 16px;
             cursor: pointer;
+            width: 100%;
+            max-width: 350px;
         }
 
         #loading {
@@ -26,7 +35,7 @@
         }
 
         #texto {
-            font-size: 20px;
+            font-size: 16px;
             color: green;
             font-weight: bold;
             margin-top: 20px;
@@ -38,6 +47,24 @@
             margin-top: 20px;
             max-width: 100%;
             height: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        /* Estilos para telas menores */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 20px;
+            }
+
+            #texto {
+                font-size: 14px;
+            }
+
+            input[type="file"] {
+                padding: 8px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
