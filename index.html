@@ -14,6 +14,8 @@
         video {
             border: 2px solid black;
             margin-top: 20px;
+            width: 100%;
+            height: auto;
         }
 
         canvas {
@@ -78,7 +80,7 @@
 
     <div>
         <div id="container">
-            <video id="video" width="100%" height="auto" autoplay></video>
+            <video id="video" autoplay></video>
             <canvas id="canvas" style="display:none;"></canvas>
             <img id="capturedImage" class="hidden">
         </div>
@@ -115,7 +117,8 @@
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" }
                 });
-                video.srcObject = stream;
+                video.srcObject = stream;  // Conecta o fluxo da câmera com a tag <video>
+                video.play();  // Garante que o vídeo comece a tocar
             } catch (err) {
                 console.error('Erro ao acessar a câmera:', err);
                 alert('Erro ao acessar a câmera. Certifique-se de que o dispositivo tem uma câmera traseira e que as permissões foram concedidas.');
@@ -219,26 +222,13 @@
             capturedImage.src = cropCanvas.toDataURL();
             capturedImage.classList.remove('hidden');  // Exibir a imagem capturada
 
-            // Parar a câmera (travando a captura)
-            if (stream) {
-                let tracks = stream.getTracks();
-                tracks.forEach(track => track.stop());
-            }
-
-            // Processar com Tesseract.js
-            Tesseract.recognize(
-                cropCanvas,
-                'eng',
-                {
-                    logger: (m) => console.log(m),  // Para ver o progresso
-                }
-            ).then(({ data: { text } }) => {
-                // Exibe o texto extraído
-                textoDisplay.textContent = 'Texto detectado: ' + text.trim();
-
-                // Esconde o carregando
-                loadingDisplay.classList.add('hidden');
-            });
+            // Processar a imagem com o Tesseract.js (OCR)
+            Tesseract.recognize(cropCanvas.toDataURL(), 'eng', { logger: (m) => console.log(m) })
+                .then(({ data: { text } }) => {
+                    textoDisplay.textContent = 'Texto detectado: ' + text.trim();
+                    loadingDisplay.classList.add('hidden');
+                    captureButton.disabled = false;
+                });
         });
     </script>
 </body>
