@@ -56,46 +56,21 @@
             position: relative;
             display: inline-block;
         }
-
-        .message {
-            margin-top: 20px;
-            font-size: 18px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        #capturedImage {
-            display: block;
-            margin-top: 20px;
-            max-width: 100%;
-            height: auto;
-            border: 2px solid black;
-        }
     </style>
 </head>
 <body>
     <h1>Captura e Recorte de Texto</h1>
 
-    <div>
-        <div id="container">
-            <video id="video" autoplay></video>
-            <canvas id="canvas" style="display:none;"></canvas>
-            <img id="capturedImage" class="hidden">
-        </div>
-        <button id="capture">Capturar Imagem</button>
-        <button id="nextStep" class="hidden">Confirmar Recorte</button>
+    <div id="container">
+        <video id="video" width="100%" height="auto" autoplay></video>
+        <canvas id="canvas"></canvas>
         <div id="cropArea"></div>
     </div>
 
-    <div id="loading" class="hidden">
-        <p>Processando imagem... <span>🔄</span></p>
-    </div>
-
-    <div id="stepMessage" class="message">Recorte o número de série na imagem.</div>
-
-    <div id="texto" class="message"></div>
+    <button id="capture">Capturar Imagem</button>
+    <button id="nextStep" style="display:none;">Ler Texto</button>
+    <p id="loading">Processando...</p>
+    <div id="texto"></div>
 
     <script>
         const video = document.getElementById('video');
@@ -103,132 +78,97 @@
         const ctx = canvas.getContext('2d');
         const captureButton = document.getElementById('capture');
         const nextStepButton = document.getElementById('nextStep');
-        const textoDisplay = document.getElementById('texto');
-        const loadingDisplay = document.getElementById('loading');
+        const loadingText = document.getElementById('loading');
+        const textoDiv = document.getElementById('texto');
         const cropArea = document.getElementById('cropArea');
-        const capturedImage = document.getElementById('capturedImage');
-        const stepMessage = document.getElementById('stepMessage');
-        let startX, startY, isDrawing = false;
-        let stream;  // Para armazenar o fluxo de vídeo
+
+        let selectedArea = { x: 0, y: 0, width: 0, height: 0 };
+        let isDragging = false;
 
         // Função para acessar a câmera
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
+                const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" }
                 });
-                video.srcObject = stream;  // Conecta o fluxo da câmera com a tag <video>
-                video.play();  // Garante que o vídeo comece a tocar
+
+                video.srcObject = stream;
             } catch (err) {
                 console.error('Erro ao acessar a câmera:', err);
-                alert('Erro ao acessar a câmera. Certifique-se de que o dispositivo tem uma câmera traseira e que as permissões foram concedidas.');
+                alert('Erro ao acessar a câmera.');
             }
         }
 
         // Inicializa a câmera
         startCamera();
 
-        // Função para começar a desenhar a área de recorte (para toque e mouse)
-        function startDrawing(e) {
-            const clientX = e.clientX || e.touches[0].clientX;
-            const clientY = e.clientY || e.touches[0].clientY;
-
-            isDrawing = true;
-            startX = clientX;
-            startY = clientY;
-            cropArea.style.left = `${startX}px`;
-            cropArea.style.top = `${startY}px`;
-            cropArea.style.width = '0px';
-            cropArea.style.height = '0px';
-            cropArea.style.display = 'block';
-        }
-
-        // Função para ajustar o recorte enquanto o usuário arrasta (para toque e mouse)
-        function drawCropArea(e) {
-            if (!isDrawing) return;
-            const clientX = e.clientX || e.touches[0].clientX;
-            const clientY = e.clientY || e.touches[0].clientY;
-
-            const width = clientX - startX;
-            const height = clientY - startY;
-            cropArea.style.width = `${Math.abs(width)}px`;
-            cropArea.style.height = `${Math.abs(height)}px`;
-
-            if (width < 0) cropArea.style.left = `${clientX}px`;
-            if (height < 0) cropArea.style.top = `${clientY}px`;
-        }
-
-        // Função para finalizar o recorte ao soltar o botão do mouse ou toque
-        function stopDrawing() {
-            isDrawing = false;
-            nextStepButton.classList.remove('hidden');  // Mostra o botão de confirmação de recorte
-        }
-
-        // Acessar eventos de mouse e toque
-        video.addEventListener('mousedown', startDrawing);
-        video.addEventListener('mousemove', drawCropArea);
-        video.addEventListener('mouseup', stopDrawing);
-
-        video.addEventListener('touchstart', startDrawing);
-        video.addEventListener('touchmove', drawCropArea);
-        video.addEventListener('touchend', stopDrawing);
-
-        // Função para capturar a imagem e realizar OCR
+        // Função para capturar a imagem
         captureButton.addEventListener('click', () => {
-            stepMessage.textContent = 'Recorte o número de série na imagem';
-            captureButton.disabled = true;
-        });
-
-        // Função para confirmar o recorte e processar a imagem
-        nextStepButton.addEventListener('click', () => {
-            // Esconder a área de recorte
-            cropArea.style.display = 'none';
-
-            // Exibir a mensagem de carregamento enquanto o OCR está sendo processado
-            loadingDisplay.classList.remove('hidden');
-
-            // Captura a imagem do vídeo
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Calcula as dimensões do recorte
-            const cropX = parseInt(cropArea.style.left);
-            const cropY = parseInt(cropArea.style.top);
-            const cropWidth = parseInt(cropArea.style.width);
-            const cropHeight = parseInt(cropArea.style.height);
+            // Mostrar área de recorte
+            cropArea.style.display = 'block';
+            nextStepButton.style.display = 'block';
+        });
 
-            // Recorta a imagem conforme a área selecionada
-            const imageData = ctx.getImageData(cropX, cropY, cropWidth, cropHeight);
+        // Função para iniciar o recorte
+        cropArea.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = cropArea.getBoundingClientRect();
+            selectedArea.x = e.clientX - rect.left;
+            selectedArea.y = e.clientY - rect.top;
+        });
 
-            // Cria um novo canvas para armazenar a área recortada
+        // Função para atualizar o recorte
+        cropArea.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const rect = cropArea.getBoundingClientRect();
+            selectedArea.width = e.clientX - rect.left - selectedArea.x;
+            selectedArea.height = e.clientY - rect.top - selectedArea.y;
+
+            cropArea.style.width = `${selectedArea.width}px`;
+            cropArea.style.height = `${selectedArea.height}px`;
+        });
+
+        // Função para finalizar o recorte
+        cropArea.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Função para processar o OCR com a área recortada
+        nextStepButton.addEventListener('click', () => {
+            loadingText.style.display = 'block';
+            nextStepButton.style.display = 'none';
+
+            // Capturar a área do recorte
+            const croppedImage = ctx.getImageData(
+                selectedArea.x,
+                selectedArea.y,
+                selectedArea.width,
+                selectedArea.height
+            );
+
+            // Criar um novo canvas para o recorte
             const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = selectedArea.width;
+            cropCanvas.height = selectedArea.height;
             const cropCtx = cropCanvas.getContext('2d');
-            cropCanvas.width = cropWidth;
-            cropCanvas.height = cropHeight;
-            cropCtx.putImageData(imageData, 0, 0);
+            cropCtx.putImageData(croppedImage, 0, 0);
 
-            // Melhorar a imagem para OCR (ex: converter para escala de cinza e aumentar o contraste)
-            const imageDataForOCR = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
-            for (let i = 0; i < imageDataForOCR.data.length; i += 4) {
-                const avg = (imageDataForOCR.data[i] + imageDataForOCR.data[i + 1] + imageDataForOCR.data[i + 2]) / 3;
-                imageDataForOCR.data[i] = avg;
-                imageDataForOCR.data[i + 1] = avg;
-                imageDataForOCR.data[i + 2] = avg;
-            }
-            cropCtx.putImageData(imageDataForOCR, 0, 0);
-
-            // Mostrar a imagem recortada
-            capturedImage.src = cropCanvas.toDataURL();
-            capturedImage.classList.remove('hidden');  // Exibir a imagem capturada
-
-            // Processar a imagem com o Tesseract.js (OCR)
-            Tesseract.recognize(cropCanvas.toDataURL(), 'eng', { logger: (m) => console.log(m) })
-                .then(({ data: { text } }) => {
-                    textoDisplay.textContent = 'Texto detectado: ' + text.trim();
-                    loadingDisplay.classList.add('hidden');
-                    captureButton.disabled = false;
-                });
+            // Processar a imagem com OCR
+            Tesseract.recognize(cropCanvas, 'eng', {
+                logger: (m) => console.log(m),
+            }).then(({ data: { text } }) => {
+                textoDiv.textContent = text || 'Nenhum texto detectado';
+                loadingText.style.display = 'none';
+            }).catch(err => {
+                console.error('Erro ao processar OCR:', err);
+                textoDiv.textContent = 'Erro no processamento da imagem';
+                loadingText.style.display = 'none';
+            });
         });
     </script>
 </body>
