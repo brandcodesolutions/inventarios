@@ -194,22 +194,29 @@
             cropCanvas.height = cropHeight;
             cropCtx.putImageData(imageData, 0, 0);
 
-            // Processamento de OCR para capturar o texto da área recortada
-            Tesseract.recognize(cropCanvas, 'eng', {
-                logger: (m) => console.log(m),
-            }).then(({ data: { text } }) => {
-                // Exibe o texto detectado
-                textoDisplay.textContent = text || 'Nenhum texto detectado';
+            // Melhorar a imagem para OCR (ex: converter para escala de cinza e aumentar o contraste)
+            const imageDataForOCR = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
+            for (let i = 0; i < imageDataForOCR.data.length; i += 4) {
+                const avg = (imageDataForOCR.data[i] + imageDataForOCR.data[i + 1] + imageDataForOCR.data[i + 2]) / 3;
+                imageDataForOCR.data[i] = avg;
+                imageDataForOCR.data[i + 1] = avg;
+                imageDataForOCR.data[i + 2] = avg;
+            }
+            cropCtx.putImageData(imageDataForOCR, 0, 0);
 
-                // Esconder a mensagem de carregamento após o processamento
+            // Processar com Tesseract.js
+            Tesseract.recognize(
+                cropCanvas,
+                'eng',
+                {
+                    logger: (m) => console.log(m),  // Para ver o progresso
+                }
+            ).then(({ data: { text } }) => {
+                // Exibe o texto extraído
+                textoDisplay.textContent = 'Texto detectado: ' + text.trim();
+
+                // Esconde o carregando
                 loadingDisplay.classList.add('hidden');
-                nextStepButton.classList.add('hidden');
-                captureButton.disabled = false;  // Habilita o botão de captura novamente
-            }).catch(err => {
-                console.error('Erro ao processar OCR:', err);
-                loadingDisplay.classList.add('hidden');
-                nextStepButton.classList.add('hidden');
-                captureButton.disabled = false;
             });
         });
     </script>
