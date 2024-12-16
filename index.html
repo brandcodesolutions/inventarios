@@ -37,34 +37,19 @@
         const numeroDisplay = document.getElementById('numero');
         let selectedOptions = [];
 
-        // Função para acessar a câmera
+        // Função para acessar a câmera traseira
         async function startCamera() {
             try {
-                // Verificar a permissão de câmera
-                const permission = await navigator.permissions.query({ name: 'camera' });
-                if (permission.state === 'denied') {
-                    alert('Permissão para acessar a câmera negada! Verifique as configurações do navegador.');
-                    return;
-                }
+                // Solicitar permissão para acessar a câmera
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" } // "environment" é para a câmera traseira
+                });
 
-                // Procurar por câmeras (traseira ou frontal)
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const rearCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'environment');
-                const frontCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'user');
-                
-                let camera = rearCamera || frontCamera; // Se não encontrar traseira, tenta frontal
-
-                if (camera) {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { deviceId: camera.deviceId }
-                    });
-                    video.srcObject = stream;
-                } else {
-                    alert('Nenhuma câmera disponível!');
-                }
+                // Configura o vídeo com o stream da câmera
+                video.srcObject = stream;
             } catch (err) {
                 console.error('Erro ao acessar a câmera:', err);
-                alert('Erro ao acessar a câmera. Verifique as permissões.');
+                alert('Erro ao acessar a câmera. Certifique-se de que o dispositivo tem uma câmera traseira e que as permissões foram concedidas.');
             }
         }
 
@@ -73,9 +58,15 @@
 
         // Função para capturar a imagem e realizar OCR
         captureButton.addEventListener('click', () => {
+            // Ajustar a resolução do canvas
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+
+            // Desenhar o conteúdo do vídeo no canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Debug para garantir que a imagem foi capturada
+            console.log("Imagem capturada no canvas:", canvas.toDataURL());
 
             // Processamento de OCR
             Tesseract.recognize(canvas, 'eng', {
