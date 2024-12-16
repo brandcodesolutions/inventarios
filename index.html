@@ -35,6 +35,13 @@
             word-wrap: break-word;
             white-space: pre-wrap; /* Para quebrar as linhas */
         }
+
+        #loading {
+            font-size: 16px;
+            color: #555;
+            margin-top: 20px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -44,6 +51,10 @@
         <video id="video" width="100%" height="auto" autoplay></video>
         <canvas id="canvas" style="display:none;"></canvas>
         <button id="capture">Capturar Imagem</button>
+    </div>
+
+    <div id="loading">
+        <p>Processando imagem... <span>🔄</span></p>
     </div>
 
     <div>
@@ -56,6 +67,7 @@
         const ctx = canvas.getContext('2d');
         const captureButton = document.getElementById('capture');
         const textoDisplay = document.getElementById('texto');
+        const loadingDisplay = document.getElementById('loading');
 
         // Função para acessar a câmera
         async function startCamera() {
@@ -78,6 +90,9 @@
 
         // Função para capturar a imagem e realizar OCR
         captureButton.addEventListener('click', () => {
+            // Exibir a mensagem de carregamento enquanto o OCR está sendo processado
+            loadingDisplay.style.display = 'block';
+
             // Definir tamanho do canvas para o tamanho do vídeo
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -91,7 +106,13 @@
             }).then(({ data: { text } }) => {
                 // Exibe o texto detectado
                 textoDisplay.textContent = text || 'Nenhum texto detectado';
-            }).catch(err => console.error('Erro ao processar OCR:', err));
+
+                // Esconder a mensagem de carregamento após o processamento
+                loadingDisplay.style.display = 'none';
+            }).catch(err => {
+                console.error('Erro ao processar OCR:', err);
+                loadingDisplay.style.display = 'none'; // Esconde o loading em caso de erro
+            });
         });
     </script>
 </body>
