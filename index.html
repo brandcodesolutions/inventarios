@@ -41,30 +41,19 @@
         async function startCamera() {
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
-                // Encontrar a câmera traseira
-                const rearCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'environment');
-                
+                const rearCamera = devices.find(device => device.kind === 'videoinput' && device.label.toLowerCase().includes('back'));
+
                 if (rearCamera) {
-                    // Acessar a câmera traseira
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: { deviceId: rearCamera.deviceId }
                     });
                     video.srcObject = stream;
                 } else {
-                    alert('Câmera traseira não encontrada. Tentando câmera frontal...');
-                    // Caso não encontre a traseira, tenta a frontal
-                    const frontCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'user');
-                    if (frontCamera) {
-                        const stream = await navigator.mediaDevices.getUserMedia({
-                            video: { deviceId: frontCamera.deviceId }
-                        });
-                        video.srcObject = stream;
-                    } else {
-                        alert('Nenhuma câmera disponível!');
-                    }
+                    alert('Câmera traseira não encontrada.');
                 }
             } catch (err) {
-                alert('Erro ao acessar a câmera: ' + err.message);
+                console.error('Erro ao acessar câmera:', err);
+                alert('Erro ao acessar a câmera. Certifique-se de que o dispositivo tem uma câmera traseira.');
             }
         }
 
