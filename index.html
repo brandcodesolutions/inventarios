@@ -37,18 +37,34 @@
         const numeroDisplay = document.getElementById('numero');
         let selectedOptions = [];
 
-        // Configurações para acessar a câmera traseira
+        // Função para acessar a câmera traseira
         async function startCamera() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const rearCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'environment');
-            
-            if (rearCamera) {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { deviceId: rearCamera.deviceId }
-                });
-                video.srcObject = stream;
-            } else {
-                alert('Câmera traseira não encontrada');
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                // Encontrar a câmera traseira
+                const rearCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'environment');
+                
+                if (rearCamera) {
+                    // Acessar a câmera traseira
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: rearCamera.deviceId }
+                    });
+                    video.srcObject = stream;
+                } else {
+                    alert('Câmera traseira não encontrada. Tentando câmera frontal...');
+                    // Caso não encontre a traseira, tenta a frontal
+                    const frontCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'user');
+                    if (frontCamera) {
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                            video: { deviceId: frontCamera.deviceId }
+                        });
+                        video.srcObject = stream;
+                    } else {
+                        alert('Nenhuma câmera disponível!');
+                    }
+                }
+            } catch (err) {
+                alert('Erro ao acessar a câmera: ' + err.message);
             }
         }
 
