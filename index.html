@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Captura de Números e Códigos</title>
+    <title>Captura de Texto</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
     <style>
         body {
@@ -27,15 +27,18 @@
             cursor: pointer;
         }
 
-        #numero {
+        #texto {
             font-size: 20px;
             color: green;
             font-weight: bold;
+            margin-top: 20px;
+            word-wrap: break-word;
+            white-space: pre-wrap; /* Para quebrar as linhas */
         }
     </style>
 </head>
 <body>
-    <h1>Captura de Números e Códigos</h1>
+    <h1>Captura de Texto da Imagem</h1>
 
     <div>
         <video id="video" width="100%" height="auto" autoplay></video>
@@ -44,7 +47,7 @@
     </div>
 
     <div>
-        <p>Texto Detectado: <span id="numero"></span></p>
+        <p>Texto Detectado: <span id="texto"></span></p>
     </div>
 
     <script>
@@ -52,7 +55,7 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const captureButton = document.getElementById('capture');
-        const numeroDisplay = document.getElementById('numero');
+        const textoDisplay = document.getElementById('texto');
 
         // Função para acessar a câmera
         async function startCamera() {
@@ -75,24 +78,19 @@
 
         // Função para capturar a imagem e realizar OCR
         captureButton.addEventListener('click', () => {
+            // Definir tamanho do canvas para o tamanho do vídeo
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+
+            // Desenha o vídeo no canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Ajuste a imagem para o OCR (exemplo de processamento de contraste, se necessário)
-            // ctx.filter = 'contrast(2)';
-            // ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Processamento de OCR
+            // Processamento de OCR para capturar todo o texto da imagem
             Tesseract.recognize(canvas, 'eng', {
-                logger: (m) => console.log(m),
+                logger: (m) => console.log(m), // Mostra o progresso do OCR
             }).then(({ data: { text } }) => {
                 // Exibe o texto detectado
-                const numeroDetectado = text.match(/\d+/g) ? text.match(/\d+/g)[0] : 'Nenhum número detectado';
-                numeroDisplay.textContent = numeroDetectado;
-
-                // Enviar os dados para o Google Forms ou outra plataforma
-                // Aqui você pode implementar o código para enviar para o seu back-end ou Google Forms
+                textoDisplay.textContent = text || 'Nenhum texto detectado';
             }).catch(err => console.error('Erro ao processar OCR:', err));
         });
     </script>
