@@ -40,7 +40,14 @@
         // Função para acessar a câmera
         async function startCamera() {
             try {
-                // Procurar por câmeras (frontal e traseira)
+                // Verificar a permissão de câmera
+                const permission = await navigator.permissions.query({ name: 'camera' });
+                if (permission.state === 'denied') {
+                    alert('Permissão para acessar a câmera negada! Verifique as configurações do navegador.');
+                    return;
+                }
+
+                // Procurar por câmeras (traseira ou frontal)
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const rearCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'environment');
                 const frontCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'user');
