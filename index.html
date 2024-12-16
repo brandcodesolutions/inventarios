@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCR com Upload de Imagem</title>
+    <title>OCR com Upload e Recorte de Imagem</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -70,42 +72,103 @@
                 font-size: 18px;
             }
         }
+
+        #cropper-container {
+            max-width: 100%;
+            display: none;
+        }
+
+        #image-preview {
+            width: 100%;
+            max-width: 350px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <h1>OCR com Upload de Imagem</h1>
+    <h1>OCR com Upload e Recorte de Imagem</h1>
 
     <input type="file" id="imageUpload" accept="image/*">
+    <div id="cropper-container">
+        <img id="image-preview" />
+    </div>
     <p id="loading">Processando...</p>
     <div id="texto"></div>
 
     <script>
         const imageUpload = document.getElementById('imageUpload');
+        const cropperContainer = document.getElementById('cropper-container');
+        const imagePreview = document.getElementById('image-preview');
         const loadingText = document.getElementById('loading');
         const textoDiv = document.getElementById('texto');
+        let cropper;  // Instância do Cropper.js
 
         // Função para processar a imagem e realizar o OCR
         imageUpload.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Exibir a imagem para recorte
+                    imagePreview.src = e.target.result;
+                    cropperContainer.style.display = 'block';
+
+                    // Inicializa o cropper para a imagem
+                    if (cropper) {
+                        cropper.destroy(); // Destrói o cropper anterior, se existir
+                    }
+
+                    cropper = new Cropper(imagePreview, {
+                        aspectRatio: 16 / 9, // Pode ajustar o aspecto para o seu caso
+                        viewMode: 1, // Para permitir o recorte dentro da imagem
+                        responsive: true,
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Função para capturar a área recortada e processar o OCR
+        function processarImagemRecortada() {
+            if (cropper) {
+                const canvas = cropper.getCroppedCanvas(); // Obtém a área recortada como canvas
+
                 loadingText.style.display = 'block';
                 textoDiv.textContent = ''; // Limpar resultados anteriores
 
-                // Usar Tesseract.js para fazer OCR na imagem
-                Tesseract.recognize(
-                    file,
-                    'eng', {
-                        logger: (m) => console.log(m), // Exibe o progresso
-                    }
-                ).then(({ data: { text } }) => {
-                    textoDiv.textContent = text || 'Nenhum texto detectado.';
-                    loadingText.style.display = 'none';
-                }).catch((err) => {
-                    console.error('Erro ao processar OCR:', err);
-                    textoDiv.textContent = 'Erro no processamento da imagem.';
-                    loadingText.style.display = 'none';
+                // Usar Tesseract.js para fazer OCR na imagem recortada
+                canvas.toBlob((blob) => {
+                    Tesseract.recognize(
+                        blob,
+                        'eng', {
+                            logger: (m) => console.log(m), // Exibe o progresso
+                        }
+                    ).then(({ data: { text } }) => {
+                        textoDiv.textContent = text || 'Nenhum texto detectado.';
+                        loadingText.style.display = 'none';
+                    }).catch((err) => {
+                        console.error('Erro ao processar OCR:', err);
+                        textoDiv.textContent = 'Erro no processamento da imagem.';
+                        loadingText.style.display = 'none';
+                    });
                 });
             }
+        }
+
+        // Depois que o usuário terminar o recorte, ele clica para processar a imagem
+        imagePreview.addEventListener('load', () => {
+            setTimeout(() => {
+                if (cropper) {
+                    const processButton = document.createElement('button');
+                    processButton.textContent = 'Processar Texto';
+                    processButton.style.padding = '10px 20px';
+                    processButton.style.fontSize = '16px';
+                    processButton.style.cursor = 'pointer';
+                    document.body.appendChild(processButton);
+
+                    processButton.addEventListener('click', processarImagemRecortada);
+                }
+            }, 500);
         });
     </script>
 </body>
