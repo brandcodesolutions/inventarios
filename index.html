@@ -25,6 +25,7 @@
             cursor: pointer;
             width: 100%;
             max-width: 350px;
+            box-sizing: border-box;
         }
 
         #loading {
@@ -65,6 +66,21 @@
             input[type="file"] {
                 padding: 8px;
                 font-size: 14px;
+            }
+
+            #imagePreview {
+                max-height: 300px; /* Reduzir a altura máxima da imagem em telas menores */
+            }
+        }
+
+        /* Estilos para telas grandes */
+        @media (min-width: 600px) {
+            h1 {
+                font-size: 26px;
+            }
+
+            #texto {
+                font-size: 18px;
             }
         }
     </style>
