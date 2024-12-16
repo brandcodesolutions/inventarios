@@ -63,6 +63,14 @@
         .hidden {
             display: none;
         }
+
+        #capturedImage {
+            display: block;
+            margin-top: 20px;
+            max-width: 100%;
+            height: auto;
+            border: 2px solid black;
+        }
     </style>
 </head>
 <body>
@@ -72,6 +80,7 @@
         <div id="container">
             <video id="video" width="100%" height="auto" autoplay></video>
             <canvas id="canvas" style="display:none;"></canvas>
+            <img id="capturedImage" class="hidden">
         </div>
         <button id="capture">Capturar Imagem</button>
         <button id="nextStep" class="hidden">Confirmar Recorte</button>
@@ -95,13 +104,15 @@
         const textoDisplay = document.getElementById('texto');
         const loadingDisplay = document.getElementById('loading');
         const cropArea = document.getElementById('cropArea');
+        const capturedImage = document.getElementById('capturedImage');
         const stepMessage = document.getElementById('stepMessage');
         let startX, startY, isDrawing = false;
+        let stream;  // Para armazenar o fluxo de vídeo
 
         // Função para acessar a câmera
         async function startCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" }
                 });
                 video.srcObject = stream;
@@ -203,6 +214,16 @@
                 imageDataForOCR.data[i + 2] = avg;
             }
             cropCtx.putImageData(imageDataForOCR, 0, 0);
+
+            // Mostrar a imagem recortada
+            capturedImage.src = cropCanvas.toDataURL();
+            capturedImage.classList.remove('hidden');  // Exibir a imagem capturada
+
+            // Parar a câmera (travando a captura)
+            if (stream) {
+                let tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+            }
 
             // Processar com Tesseract.js
             Tesseract.recognize(
