@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Captura e Recorte de Imagem</title>
+    <title>Captura e Recorte de Texto</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
     <style>
         body {
@@ -20,7 +20,7 @@
             display: none;
         }
 
-        #capture {
+        #capture, #nextStep {
             margin-top: 20px;
             padding: 10px 20px;
             font-size: 16px;
@@ -54,6 +54,15 @@
             position: relative;
             display: inline-block;
         }
+
+        .message {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -65,36 +74,36 @@
             <canvas id="canvas" style="display:none;"></canvas>
         </div>
         <button id="capture">Capturar Imagem</button>
+        <button id="nextStep" class="hidden">Confirmar Recorte</button>
         <div id="cropArea"></div>
     </div>
 
-    <div id="loading">
+    <div id="loading" class="hidden">
         <p>Processando imagem... <span>🔄</span></p>
     </div>
 
-    <div>
-        <p>Texto Detectado: <span id="texto"></span></p>
-    </div>
+    <div id="stepMessage" class="message">Recorte o número de série na imagem.</div>
+
+    <div id="texto" class="message"></div>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const captureButton = document.getElementById('capture');
+        const nextStepButton = document.getElementById('nextStep');
         const textoDisplay = document.getElementById('texto');
         const loadingDisplay = document.getElementById('loading');
         const cropArea = document.getElementById('cropArea');
+        const stepMessage = document.getElementById('stepMessage');
         let startX, startY, isDrawing = false;
 
         // Função para acessar a câmera
         async function startCamera() {
             try {
-                // Solicitar permissão para acessar a câmera
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" } // "environment" é para a câmera traseira
+                    video: { facingMode: "environment" }
                 });
-
-                // Configura o vídeo com o stream da câmera
                 video.srcObject = stream;
             } catch (err) {
                 console.error('Erro ao acessar a câmera:', err);
@@ -132,12 +141,22 @@
         // Função para finalizar o recorte ao soltar o botão do mouse
         video.addEventListener('mouseup', () => {
             isDrawing = false;
+            nextStepButton.classList.remove('hidden');  // Mostra o botão de confirmação de recorte
         });
 
         // Função para capturar a imagem e realizar OCR
         captureButton.addEventListener('click', () => {
+            stepMessage.textContent = 'Recorte o número de série na imagem';
+            captureButton.disabled = true;
+        });
+
+        // Função para confirmar o recorte e processar a imagem
+        nextStepButton.addEventListener('click', () => {
+            // Esconder a área de recorte
+            cropArea.style.display = 'none';
+
             // Exibir a mensagem de carregamento enquanto o OCR está sendo processado
-            loadingDisplay.style.display = 'block';
+            loadingDisplay.classList.remove('hidden');
 
             // Captura a imagem do vídeo
             canvas.width = video.videoWidth;
@@ -162,16 +181,20 @@
 
             // Processamento de OCR para capturar o texto da área recortada
             Tesseract.recognize(cropCanvas, 'eng', {
-                logger: (m) => console.log(m), // Mostra o progresso do OCR
+                logger: (m) => console.log(m),
             }).then(({ data: { text } }) => {
                 // Exibe o texto detectado
                 textoDisplay.textContent = text || 'Nenhum texto detectado';
 
                 // Esconder a mensagem de carregamento após o processamento
-                loadingDisplay.style.display = 'none';
+                loadingDisplay.classList.add('hidden');
+                nextStepButton.classList.add('hidden');
+                captureButton.disabled = false;  // Habilita o botão de captura novamente
             }).catch(err => {
                 console.error('Erro ao processar OCR:', err);
-                loadingDisplay.style.display = 'none'; // Esconde o loading em caso de erro
+                loadingDisplay.classList.add('hidden');
+                nextStepButton.classList.add('hidden');
+                captureButton.disabled = false;
             });
         });
     </script>
