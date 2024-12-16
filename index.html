@@ -44,15 +44,6 @@
             white-space: pre-wrap; /* Para quebrar as linhas */
         }
 
-        #imagePreview {
-            margin-top: 20px;
-            max-width: 100%;
-            height: auto;
-            max-height: 500px; /* Limitar a altura máxima da imagem */
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
-
         /* Estilos para telas menores */
         @media (max-width: 600px) {
             h1 {
@@ -66,10 +57,6 @@
             input[type="file"] {
                 padding: 8px;
                 font-size: 14px;
-            }
-
-            #imagePreview {
-                max-height: 300px; /* Reduzir a altura máxima da imagem em telas menores */
             }
         }
 
@@ -89,7 +76,6 @@
     <h1>OCR com Upload de Imagem</h1>
 
     <input type="file" id="imageUpload" accept="image/*">
-    <div id="imagePreview"></div>
     <p id="loading">Processando...</p>
     <div id="texto"></div>
 
@@ -97,49 +83,30 @@
         const imageUpload = document.getElementById('imageUpload');
         const loadingText = document.getElementById('loading');
         const textoDiv = document.getElementById('texto');
-        const imagePreview = document.getElementById('imagePreview');
 
-        // Função para ler a imagem carregada
+        // Função para processar a imagem e realizar o OCR
         imageUpload.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    // Exibir a imagem carregada
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = () => {
-                        imagePreview.innerHTML = ''; // Limpar qualquer imagem anterior
-                        imagePreview.appendChild(img);
+                loadingText.style.display = 'block';
+                textoDiv.textContent = ''; // Limpar resultados anteriores
 
-                        // Chamar a função de OCR após carregar a imagem
-                        processImageForOCR(img);
-                    };
-                };
-                reader.readAsDataURL(file);
+                // Usar Tesseract.js para fazer OCR na imagem
+                Tesseract.recognize(
+                    file,
+                    'eng', {
+                        logger: (m) => console.log(m), // Exibe o progresso
+                    }
+                ).then(({ data: { text } }) => {
+                    textoDiv.textContent = text || 'Nenhum texto detectado.';
+                    loadingText.style.display = 'none';
+                }).catch((err) => {
+                    console.error('Erro ao processar OCR:', err);
+                    textoDiv.textContent = 'Erro no processamento da imagem.';
+                    loadingText.style.display = 'none';
+                });
             }
         });
-
-        // Função para processar a imagem e realizar o OCR
-        function processImageForOCR(img) {
-            loadingText.style.display = 'block';
-            textoDiv.textContent = ''; // Limpar resultados anteriores
-
-            // Usar Tesseract.js para fazer OCR na imagem
-            Tesseract.recognize(
-                img,
-                'eng', {
-                    logger: (m) => console.log(m), // Exibe o progresso
-                }
-            ).then(({ data: { text } }) => {
-                textoDiv.textContent = text || 'Nenhum texto detectado.';
-                loadingText.style.display = 'none';
-            }).catch((err) => {
-                console.error('Erro ao processar OCR:', err);
-                textoDiv.textContent = 'Erro no processamento da imagem.';
-                loadingText.style.display = 'none';
-            });
-        }
     </script>
 </body>
 </html>
