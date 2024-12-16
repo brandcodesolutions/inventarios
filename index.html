@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Captura de Códigos de Barras e OCR</title>
+    <title>Captura de Números e Códigos</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -56,20 +56,43 @@
         // Inicializa a câmera
         startCamera();
 
+        // Função para pré-processar a imagem (converter para escala de cinza)
+        function preprocessImage() {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Convertendo para escala de cinza (GrayScale)
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];     // Red
+                const g = data[i + 1]; // Green
+                const b = data[i + 2]; // Blue
+                
+                // Calculando o valor médio (escala de cinza)
+                const gray = 0.3 * r + 0.59 * g + 0.11 * b;
+
+                // Definindo os valores RGB da escala de cinza
+                data[i] = data[i + 1] = data[i + 2] = gray;
+            }
+
+            // Colocando a imagem pré-processada no canvas
+            ctx.putImageData(imageData, 0, 0);
+        }
+
         // Função para capturar a imagem e realizar OCR
         captureButton.addEventListener('click', () => {
-            // Ajustar a resolução do canvas
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-
-            // Desenhar o conteúdo do vídeo no canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+            // Aplicar pré-processamento de imagem
+            preprocessImage();
+
             // Debug para garantir que a imagem foi capturada
-            console.log("Imagem capturada no canvas:", canvas.toDataURL());
+            console.log("Imagem pré-processada:", canvas.toDataURL());
 
             // Processamento de OCR
             Tesseract.recognize(canvas, 'eng', {
+                tessedit_char_whitelist: '0123456789', // Limitar ao reconhecimento de números
                 logger: (m) => console.log(m),
             }).then(({ data: { text } }) => {
                 // Exibe o texto detectado
