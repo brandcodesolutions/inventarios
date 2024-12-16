@@ -114,35 +114,50 @@
         // Inicializa a câmera
         startCamera();
 
-        // Função para começar a desenhar a área de recorte
-        video.addEventListener('mousedown', (e) => {
+        // Função para começar a desenhar a área de recorte (para toque e mouse)
+        function startDrawing(e) {
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+
             isDrawing = true;
-            startX = e.offsetX;
-            startY = e.offsetY;
+            startX = clientX;
+            startY = clientY;
             cropArea.style.left = `${startX}px`;
             cropArea.style.top = `${startY}px`;
             cropArea.style.width = '0px';
             cropArea.style.height = '0px';
             cropArea.style.display = 'block';
-        });
+        }
 
-        // Função para ajustar o recorte enquanto o usuário arrasta
-        video.addEventListener('mousemove', (e) => {
-            if (isDrawing) {
-                const width = e.offsetX - startX;
-                const height = e.offsetY - startY;
-                cropArea.style.width = `${Math.abs(width)}px`;
-                cropArea.style.height = `${Math.abs(height)}px`;
-                if (width < 0) cropArea.style.left = `${e.offsetX}px`;
-                if (height < 0) cropArea.style.top = `${e.offsetY}px`;
-            }
-        });
+        // Função para ajustar o recorte enquanto o usuário arrasta (para toque e mouse)
+        function drawCropArea(e) {
+            if (!isDrawing) return;
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
 
-        // Função para finalizar o recorte ao soltar o botão do mouse
-        video.addEventListener('mouseup', () => {
+            const width = clientX - startX;
+            const height = clientY - startY;
+            cropArea.style.width = `${Math.abs(width)}px`;
+            cropArea.style.height = `${Math.abs(height)}px`;
+
+            if (width < 0) cropArea.style.left = `${clientX}px`;
+            if (height < 0) cropArea.style.top = `${clientY}px`;
+        }
+
+        // Função para finalizar o recorte ao soltar o botão do mouse ou toque
+        function stopDrawing() {
             isDrawing = false;
             nextStepButton.classList.remove('hidden');  // Mostra o botão de confirmação de recorte
-        });
+        }
+
+        // Acessar eventos de mouse e toque
+        video.addEventListener('mousedown', startDrawing);
+        video.addEventListener('mousemove', drawCropArea);
+        video.addEventListener('mouseup', stopDrawing);
+
+        video.addEventListener('touchstart', startDrawing);
+        video.addEventListener('touchmove', drawCropArea);
+        video.addEventListener('touchend', stopDrawing);
 
         // Função para capturar a imagem e realizar OCR
         captureButton.addEventListener('click', () => {
