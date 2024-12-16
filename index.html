@@ -37,23 +37,23 @@
         const numeroDisplay = document.getElementById('numero');
         let selectedOptions = [];
 
-        // Função para acessar a câmera traseira
+        // Configurações para acessar a câmera traseira
         async function startCamera() {
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
-                const rearCamera = devices.find(device => device.kind === 'videoinput' && device.label.toLowerCase().includes('back'));
-
+                const rearCamera = devices.find(device => device.kind === 'videoinput' && device.facing === 'environment');
+                
                 if (rearCamera) {
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: { deviceId: rearCamera.deviceId }
                     });
                     video.srcObject = stream;
                 } else {
-                    alert('Câmera traseira não encontrada.');
+                    alert('Câmera traseira não encontrada');
                 }
             } catch (err) {
-                console.error('Erro ao acessar câmera:', err);
-                alert('Erro ao acessar a câmera. Certifique-se de que o dispositivo tem uma câmera traseira.');
+                console.error("Erro ao acessar a câmera:", err);
+                alert('Erro ao tentar acessar a câmera. Verifique se a permissão foi concedida.');
             }
         }
 
@@ -62,21 +62,23 @@
 
         // Função para capturar a imagem e realizar OCR
         captureButton.addEventListener('click', () => {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // Certifique-se de que o video está pronto
+            if (video.srcObject && video.srcObject.active) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Processamento de OCR
-            Tesseract.recognize(canvas, 'eng', {
-                logger: (m) => console.log(m),
-            }).then(({ data: { text } }) => {
-                // Exibe o texto detectado
-                const numeroDetectado = text.match(/\d+/g) ? text.match(/\d+/g)[0] : 'Nenhum número detectado';
-                numeroDisplay.textContent = numeroDetectado;
-
-                // Enviar os dados para o Google Forms ou outra plataforma
-                // Aqui você pode implementar o código para enviar para o seu back-end ou Google Forms
-            }).catch(err => console.error('Erro ao processar OCR:', err));
+                // Agora capturamos a imagem
+                Tesseract.recognize(canvas, 'eng', {
+                    logger: (m) => console.log(m),
+                }).then(({ data: { text } }) => {
+                    // Exibe o texto detectado
+                    const numeroDetectado = text.match(/\d+/g) ? text.match(/\d+/g)[0] : 'Nenhum número detectado';
+                    numeroDisplay.textContent = numeroDetectado;
+                }).catch(err => console.error('Erro ao processar OCR:', err));
+            } else {
+                alert("Câmera não está acessível.");
+            }
         });
 
         // Captura as opções selecionadas
