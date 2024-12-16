@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Captura de Texto</title>
+    <title>Captura e Recorte de Imagem</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
     <style>
         body {
@@ -27,6 +27,13 @@
             cursor: pointer;
         }
 
+        #loading {
+            font-size: 16px;
+            color: #555;
+            margin-top: 20px;
+            display: none;
+        }
+
         #texto {
             font-size: 20px;
             color: green;
@@ -36,21 +43,29 @@
             white-space: pre-wrap; /* Para quebrar as linhas */
         }
 
-        #loading {
-            font-size: 16px;
-            color: #555;
-            margin-top: 20px;
+        /* Estilos para o recorte */
+        #cropArea {
+            position: absolute;
+            border: 2px dashed red;
             display: none;
+        }
+
+        #container {
+            position: relative;
+            display: inline-block;
         }
     </style>
 </head>
 <body>
-    <h1>Captura de Texto da Imagem</h1>
+    <h1>Captura e Recorte de Texto</h1>
 
     <div>
-        <video id="video" width="100%" height="auto" autoplay></video>
-        <canvas id="canvas" style="display:none;"></canvas>
+        <div id="container">
+            <video id="video" width="100%" height="auto" autoplay></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+        </div>
         <button id="capture">Capturar Imagem</button>
+        <div id="cropArea"></div>
     </div>
 
     <div id="loading">
@@ -68,6 +83,8 @@
         const captureButton = document.getElementById('capture');
         const textoDisplay = document.getElementById('texto');
         const loadingDisplay = document.getElementById('loading');
+        const cropArea = document.getElementById('cropArea');
+        let startX, startY, isDrawing = false;
 
         // Função para acessar a câmera
         async function startCamera() {
@@ -88,52 +105,61 @@
         // Inicializa a câmera
         startCamera();
 
-        // Função para aplicar pré-processamento básico na imagem (ex: escala de cinza e aumento de contraste)
-        function preprocessImage() {
-            const width = video.videoWidth;
-            const height = video.videoHeight;
+        // Função para desenhar o retângulo de recorte
+        video.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            startX = e.offsetX;
+            startY = e.offsetY;
+            cropArea.style.left = `${startX}px`;
+            cropArea.style.top = `${startY}px`;
+            cropArea.style.width = '0px';
+            cropArea.style.height = '0px';
+            cropArea.style.display = 'block';
+        });
 
-            // Definir o tamanho do canvas para o tamanho do vídeo
-            canvas.width = width;
-            canvas.height = height;
-
-            // Desenha o vídeo no canvas
-            ctx.drawImage(video, 0, 0, width, height);
-
-            // Pega a imagem do canvas
-            let imageData = ctx.getImageData(0, 0, width, height);
-            let data = imageData.data;
-
-            // Converte para escala de cinza e aumenta o contraste (simplificado)
-            for (let i = 0; i < data.length; i += 4) {
-                let r = data[i];
-                let g = data[i + 1];
-                let b = data[i + 2];
-                // Cria um valor de escala de cinza
-                let gray = 0.3 * r + 0.59 * g + 0.11 * b;
-                data[i] = data[i + 1] = data[i + 2] = gray; // Redefine R, G, B com o valor de cinza
-
-                // Aumenta o contraste (simplificado)
-                let contrast = 1.5; // Fator de contraste
-                data[i] = Math.min(255, data[i] * contrast);
-                data[i + 1] = Math.min(255, data[i + 1] * contrast);
-                data[i + 2] = Math.min(255, data[i + 2] * contrast);
+        video.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                const width = e.offsetX - startX;
+                const height = e.offsetY - startY;
+                cropArea.style.width = `${Math.abs(width)}px`;
+                cropArea.style.height = `${Math.abs(height)}px`;
+                if (width < 0) cropArea.style.left = `${e.offsetX}px`;
+                if (height < 0) cropArea.style.top = `${e.offsetY}px`;
             }
+        });
 
-            // Coloca a imagem processada de volta no canvas
-            ctx.putImageData(imageData, 0, 0);
-        }
+        video.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
 
         // Função para capturar a imagem e realizar OCR
         captureButton.addEventListener('click', () => {
             // Exibir a mensagem de carregamento enquanto o OCR está sendo processado
             loadingDisplay.style.display = 'block';
 
-            // Pré-processar a imagem antes de usar o OCR
-            preprocessImage();
+            // Captura a imagem do vídeo
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Processamento de OCR para capturar todo o texto da imagem
-            Tesseract.recognize(canvas, 'eng', {
+            // Calcula as dimensões do recorte
+            const cropX = parseInt(cropArea.style.left);
+            const cropY = parseInt(cropArea.style.top);
+            const cropWidth = parseInt(cropArea.style.width);
+            const cropHeight = parseInt(cropArea.style.height);
+
+            // Recorta a imagem conforme a área selecionada
+            const imageData = ctx.getImageData(cropX, cropY, cropWidth, cropHeight);
+
+            // Cria um novo canvas para armazenar a área recortada
+            const cropCanvas = document.createElement('canvas');
+            const cropCtx = cropCanvas.getContext('2d');
+            cropCanvas.width = cropWidth;
+            cropCanvas.height = cropHeight;
+            cropCtx.putImageData(imageData, 0, 0);
+
+            // Processamento de OCR para capturar o texto da área recortada
+            Tesseract.recognize(cropCanvas, 'eng', {
                 logger: (m) => console.log(m), // Mostra o progresso do OCR
             }).then(({ data: { text } }) => {
                 // Exibe o texto detectado
